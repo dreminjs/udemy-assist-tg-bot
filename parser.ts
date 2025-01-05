@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 
 interface IResponse {
   title?: string | null;
-  price?: string | null;
+  price?: number | null;
 }
 
 export const findPrice = async (urlLink: string): Promise<IResponse> => {
@@ -15,24 +15,44 @@ export const findPrice = async (urlLink: string): Promise<IResponse> => {
 
   const page = await context.newPage();
 
-  // Перейдите на страницу и подождите
-  await page.goto(urlLink, { waitUntil: "networkidle" });
+  try {
+    
+    await page.goto(urlLink, { waitUntil: "networkidle" });
 
-  await page.waitForTimeout(3000);
-  const price = await page.evaluate(() => {
-    const priceElement = document.querySelector(
-      "div.base-price-text-module--price-part---xQlz>span+span>span"
-    )?.textContent;
+    const priceData = await page.evaluate(() => {
+      const priceElement = document.querySelector(
+        "div.base-price-text-module--price-part---xQlz>span+span>span"
+      )?.textContent;
 
-    const title = document.querySelector(".clp-lead__title")?.textContent;
+      const title = document.querySelector(".clp-lead__title")?.textContent;
 
+      if (!priceElement) {
+        return {
+          title: title || "Title not found",
+          price: null,
+        };
+      }
+
+      // Обработка числового формата
+      const price = parseFloat(
+        priceElement.replace(/[^0-9,.]/g, "").replace(",", ".")
+      );
+
+      return {
+        title: title || "Title not found",
+        price: isNaN(price) ? null : price,
+      };
+    });
+
+    return priceData;
+  } catch (error) {
+    console.error("Error parsing price:", error);
     return {
-      title,
-      price: priceElement,
+      title: null,
+      price: null,
     };
-  });
-
-  await browser.close();
-  
-  return price;
+  } finally {
+    // Закрытие браузера
+    await browser.close();
+  }
 };
