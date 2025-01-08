@@ -1,8 +1,8 @@
 import { chromium } from "playwright";
 
 interface IResponse {
-  title?: string | null;
-  price?: number | null;
+  title: string;
+  price: number;
 }
 
 export const findPrice = async (urlLink: string): Promise<IResponse> => {
@@ -16,12 +16,11 @@ export const findPrice = async (urlLink: string): Promise<IResponse> => {
   const page = await context.newPage();
 
   try {
-    
     await page.goto(urlLink, { waitUntil: "networkidle" });
 
     const priceData = await page.evaluate(() => {
       const priceElement = document.querySelector(
-        "div.base-price-text-module--price-part---xQlz>span+span>span"
+        "div.base-price-text-module--price-part---xQlz>span:nth-of-type(2)>span"
       )?.textContent;
 
       const title = document.querySelector(".clp-lead__title")?.textContent;
@@ -29,18 +28,17 @@ export const findPrice = async (urlLink: string): Promise<IResponse> => {
       if (!priceElement) {
         return {
           title: title || "Title not found",
-          price: null,
+          price: 0,
         };
       }
 
-      // Обработка числового формата
       const price = parseFloat(
         priceElement.replace(/[^0-9,.]/g, "").replace(",", ".")
       );
 
       return {
         title: title || "Title not found",
-        price: isNaN(price) ? null : price,
+        price: price,
       };
     });
 
@@ -48,8 +46,8 @@ export const findPrice = async (urlLink: string): Promise<IResponse> => {
   } catch (error) {
     console.error("Error parsing price:", error);
     return {
-      title: null,
-      price: null,
+      title: "Не удалось определить название курса",
+      price: 0,
     };
   } finally {
     // Закрытие браузера
